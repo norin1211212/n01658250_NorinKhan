@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Add Product</title>
+</head>
+<body>
+<h1>Add Product</h1>
+
+<input type="text" id="name" placeholder="Name" required><br>
+<textarea id="desc" placeholder="Description" rows="3"></textarea><br>
+<input type="number" id="price" placeholder="Price" step="0.01" required><br>
+<input type="number" id="stock" placeholder="Stock" required><br>
+
+<button onclick="add()">Add</button>
+
+<div id="msg" class="msg"></div>
+
+<div id="products"></div>
+
+<script>
+    async function add() {
+        const data = {
+            name: document.getElementById('name').value,
+            description: document.getElementById('desc').value,
+            price: parseFloat(document.getElementById('price').value),
+            stock: parseInt(document.getElementById('stock').value)
+        };
+
+        try {
+            const res = await fetch('/api/products', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(data)
+            });
+
+            const msg = document.getElementById('msg');
+            if (res.ok) {
+                msg.className = 'msg success';
+                msg.textContent = 'Added';
+                clear();
+                loadProducts();
+            } else {
+                msg.className = 'msg error';
+                msg.textContent = 'Error';
+            }
+
+            setTimeout(() => msg.textContent = '', 2000);
+        } catch (e) {
+            document.getElementById('msg').textContent = 'Failed';
+        }
+    }
+
+    async function loadProducts() {
+        try {
+            const res = await fetch('/api/products');
+            const products = await res.json();
+
+            const container = document.getElementById('products');
+            container.innerHTML = '';
+
+            products.forEach(p => {
+                const div = document.createElement('div');
+                div.className = 'product';
+                div.innerHTML = `
+                        <div class="product-name">${p.name}</div>
+                        <div class="product-info">${p.price} | Stock: ${p.stock}</div>
+                        ${p.description ? `<div class="product-info">${p.description}</div>` : ''}
+                    `;
+                container.appendChild(div);
+            });
+        } catch (e) {
+            console.log('Error loading products');
+        }
+    }
+
+    function clear() {
+        document.getElementById('name').value = '';
+        document.getElementById('desc').value = '';
+        document.getElementById('price').value = '';
+        document.getElementById('stock').value = '';
+    }
+
+    // Load products on page load
+    loadProducts();
+</script>
+</body>
+</html>
