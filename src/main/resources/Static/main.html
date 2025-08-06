@@ -1,0 +1,418 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Spring AI Assistant</title>
+    <style>
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', sans-serif;
+            background: linear-gradient(to right, #1e3c72, #2a5298);
+            color: #fff;
+            padding: 40px 20px;
+        }
+
+        .container {
+            background: #121212;
+            border-radius: 16px;
+            padding: 40px;
+            max-width: 960px;
+            margin: auto;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.4);
+        }
+
+        h1 {
+            text-align: center;
+            font-size: 2.5rem;
+            color: #ffffff;
+            margin-bottom: 40px;
+            letter-spacing: 1px;
+        }
+
+        .section {
+            background: #1e1e1e;
+            border: 1px solid #333;
+            border-radius: 12px;
+            padding: 30px;
+            margin-bottom: 30px;
+            transition: background 0.3s ease;
+        }
+
+        .section h2 {
+            margin-bottom: 20px;
+            color: #77d4fc;
+            font-size: 1.4rem;
+            border-bottom: 1px solid #444;
+            padding-bottom: 10px;
+        }
+
+        input {
+            width: 100%;
+            padding: 14px;
+            margin-bottom: 20px;
+            background: #2a2a2a;
+            border: 1px solid #444;
+            border-radius: 8px;
+            color: #eee;
+            font-size: 16px;
+            transition: border-color 0.3s ease;
+        }
+
+        input:focus {
+            border-color: #00bcd4;
+            outline: none;
+        }
+
+        button {
+            padding: 12px 24px;
+            margin: 5px 10px 20px 0;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 15px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+        }
+
+        .btn-chat {
+            background-color: #03a9f4;
+            color: #fff;
+        }
+
+        .btn-image {
+            background-color: #4caf50;
+            color: #fff;
+        }
+
+        .btn-city {
+            background-color: #ff9800;
+            color: #fff;
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            opacity: 0.9;
+        }
+
+        button:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
+        .response-box {
+            background: #222;
+            border: 1px solid #444;
+            border-radius: 8px;
+            padding: 20px;
+            margin-top: 10px;
+            color: #ddd;
+            white-space: pre-wrap;
+            display: none;
+        }
+
+        .response-box.show {
+            display: block;
+        }
+
+        .generated-image {
+            max-width: 100%;
+            border-radius: 10px;
+            border: 1px solid #666;
+            margin-top: 15px;
+        }
+
+        .error {
+            background-color: #ff5252;
+            color: #fff;
+            padding: 10px;
+            border-radius: 8px;
+            margin-top: 10px;
+        }
+
+        .section-title {
+            font-weight: bold;
+            font-size: 1.1rem;
+            margin: 20px 0 10px 0;
+            color: #f1f1f1;
+            display: none;
+        }
+
+        .city-inputs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 15px;
+            flex-wrap: wrap;
+        }
+
+        .city-inputs input {
+            flex: 1;
+            margin-bottom: 0;
+        }
+
+        @media (max-width: 600px) {
+            .city-inputs {
+                flex-direction: column;
+            }
+
+            .city-inputs input {
+                margin-bottom: 15px;
+            }
+        }
+    </style>
+
+</head>
+<body>
+<div class="container">
+    <h1>🤖 Spring AI Assistant</h1>
+
+    <!-- Chat Section -->
+    <div class="section">
+        <h2>💬 Chat with AI</h2>
+        <input type="text" id="chatPromptInput" placeholder="Ask me anything..." />
+        <button class="btn-chat" id="chatBtn" onclick="generateText()">
+            Generate Response
+        </button>
+        <div class="section-title" id="chatResponseTitle">Response:</div>
+        <div id="chatResponse" class="response-box"></div>
+    </div>
+
+    <!-- City Guide Section -->
+    <div class="section">
+        <h2>🏙️ City Travel Guide</h2>
+        <div class="city-inputs">
+            <input type="text" id="cityInput" placeholder="Enter city name (e.g., Paris)" />
+            <input type="text" id="interestInput" placeholder="Your interests (e.g., museums, food)" />
+        </div>
+        <button class="btn-city" id="cityBtn" onclick="generateCityGuide()">
+            Get City Guide
+        </button>
+        <div class="section-title" id="cityResponseTitle">City Guide:</div>
+        <div id="cityResponse" class="response-box"></div>
+    </div>
+
+    <!-- Image Generation Section -->
+    <div class="section">
+        <h2>🎨 Image Generation</h2>
+        <input type="text" id="imagePromptInput" placeholder="Describe the image you want (e.g., cute panda eating bamboo)" />
+        <button class="btn-image" id="imageBtn" onclick="generateImage()">
+            Generate Image
+        </button>
+        <div class="section-title" id="imageResponseTitle">Generated Image:</div>
+        <div id="imageResponse" class="response-box">
+            <div id="imageContainer"></div>
+        </div>
+    </div>
+</div>
+
+<script>
+    const API_BASE_URL = 'http://localhost:8080';
+
+    async function generateText() {
+        const prompt = document.getElementById('chatPromptInput').value.trim();
+        if (!prompt) {
+            showError('chatResponse', 'Please enter a prompt.');
+            showTitle('chatResponseTitle');
+            return;
+        }
+
+        const chatBtn = document.getElementById('chatBtn');
+        const chatResponse = document.getElementById('chatResponse');
+        const chatResponseTitle = document.getElementById('chatResponseTitle');
+
+        // Show loading state
+        setLoading(chatBtn, 'Loading...');
+        hideResponse(chatResponse, chatResponseTitle);
+
+        try {
+            const response = await fetch(`${API_BASE_URL}/ask-ai?prompt=${encodeURIComponent(prompt)}`);
+
+            if (!response.ok) {
+                throw new Error(`Server error: ${response.status}`);
+            }
+
+            const data = await response.text();
+            showResponse(chatResponse, chatResponseTitle, data);
+
+        } catch (error) {
+            console.error('Error generating text:', error);
+            showError('chatResponse', `Error: ${error.message}. Check if your Spring Boot server is running.`);
+            showTitle('chatResponseTitle');
+        } finally {
+            resetButton(chatBtn, 'Generate Response');
+        }
+    }
+
+    async function generateCityGuide() {
+        const city = document.getElementById('cityInput').value.trim();
+        const interest = document.getElementById('interestInput').value.trim();
+
+        if (!city || !interest) {
+            showError('cityResponse', 'Please enter both city name and your interests.');
+            showTitle('cityResponseTitle');
+            return;
+        }
+
+        const cityBtn = document.getElementById('cityBtn');
+        const cityResponse = document.getElementById('cityResponse');
+        const cityResponseTitle = document.getElementById('cityResponseTitle');
+
+        setLoading(cityBtn, 'Loading...');
+        hideResponse(cityResponse, cityResponseTitle);
+
+        try {
+            const response = await fetch(`${API_BASE_URL}/city-guide?city=${encodeURIComponent(city)}&interest=${encodeURIComponent(interest)}`);
+
+            if (!response.ok) {
+                throw new Error(`Server error: ${response.status}`);
+            }
+
+            const data = await response.text();
+            showResponse(cityResponse, cityResponseTitle, data);
+
+        } catch (error) {
+            console.error('Error generating city guide:', error);
+            showError('cityResponse', `Error: ${error.message}. Check if your Spring Boot server is running.`);
+            showTitle('cityResponseTitle');
+        } finally {
+            resetButton(cityBtn, 'Get City Guide');
+        }
+    }
+
+    async function generateImage() {
+        const prompt = document.getElementById('imagePromptInput').value.trim();
+        if (!prompt) {
+            showError('imageResponse', 'Please enter a description for the image.');
+            showTitle('imageResponseTitle');
+            return;
+        }
+
+        const imageBtn = document.getElementById('imageBtn');
+        const imageResponse = document.getElementById('imageResponse');
+        const imageResponseTitle = document.getElementById('imageResponseTitle');
+        const imageContainer = document.getElementById('imageContainer');
+
+        setLoading(imageBtn, 'Generating...');
+        hideResponse(imageResponse, imageResponseTitle);
+        imageContainer.innerHTML = '';
+
+        try {
+            const response = await fetch(`${API_BASE_URL}/generate-image-json?prompt=${encodeURIComponent(prompt)}`, {
+                method: 'GET',
+                headers: {
+                    'Accept': 'application/json',
+                }
+            });
+
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+            }
+
+            const data = await response.json();
+            console.log('Image generation response:', data);
+
+            if (data.success === 'true' && data.imageUrl) {
+                displayImage(data.imageUrl);
+            } else if (data.error) {
+                throw new Error(data.error);
+            } else {
+                throw new Error('Unexpected response format');
+            }
+
+        } catch (error) {
+            console.error('Error generating image:', error);
+            showError('imageResponse', `Error: ${error.message}`);
+            showTitle('imageResponseTitle');
+        } finally {
+            resetButton(imageBtn, 'Generate Image');
+        }
+    }
+
+    function displayImage(imageUrl) {
+        const imageContainer = document.getElementById('imageContainer');
+        const imageResponse = document.getElementById('imageResponse');
+        const imageResponseTitle = document.getElementById('imageResponseTitle');
+
+        console.log('Displaying image:', imageUrl);
+
+        const img = document.createElement('img');
+        img.src = imageUrl;
+        img.alt = 'Generated Image';
+        img.className = 'generated-image';
+
+        img.onload = () => {
+            console.log('Image loaded successfully');
+            imageContainer.appendChild(img);
+            imageResponse.classList.remove('error');
+            imageResponse.classList.add('show');
+            imageResponseTitle.style.display = 'block';
+        };
+
+        img.onerror = () => {
+            console.error('Failed to load image from URL:', imageUrl);
+            showError('imageResponse', 'Failed to load the generated image. The image URL may be invalid or expired.');
+            showTitle('imageResponseTitle');
+        };
+    }
+
+    // Helper functions
+    function setLoading(button, text) {
+        button.disabled = true;
+        button.textContent = text;
+    }
+
+    function resetButton(button, text) {
+        button.disabled = false;
+        button.textContent = text;
+    }
+
+    function hideResponse(responseBox, titleElement) {
+        responseBox.classList.remove('show');
+        titleElement.style.display = 'none';
+    }
+
+    function showResponse(responseBox, titleElement, content) {
+        responseBox.textContent = content;
+        responseBox.classList.remove('error');
+        responseBox.classList.add('show');
+        titleElement.style.display = 'block';
+    }
+
+    function showError(elementId, message) {
+        const element = document.getElementById(elementId);
+        element.textContent = message;
+        element.classList.add('error');
+        element.classList.add('show');
+    }
+
+    function showTitle(titleId) {
+        document.getElementById(titleId).style.display = 'block';
+    }
+
+    // Allow Enter key to trigger respective functions
+    document.getElementById('chatPromptInput').addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') generateText();
+    });
+
+    document.getElementById('imagePromptInput').addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') generateImage();
+    });
+
+    document.getElementById('interestInput').addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') generateCityGuide();
+    });
+
+    // Auto-focus on first input
+    document.addEventListener('DOMContentLoaded', function() {
+        document.getElementById('chatPromptInput').focus();
+    });
+</script>
+</body>
+</html>
